@@ -1,6 +1,21 @@
+"""
+
+ The non-machine-learning game serving as background created by:
+
+ Sample Breakout Game
+
+ Sample Python/Pygame Programs
+ Simpson College Computer Science
+ http://programarcadegames.com/
+ http://simpson.edu/computer-science/
+
+
+
+"""
+
+
 import math
 import pygame
-import numpy as np
 import torch
 device = torch.device("cuda:0")
 dtype = torch.float
@@ -167,26 +182,27 @@ class Player(pygame.sprite.Sprite):
     def read_pos(self):
         return self.rect.x
 
+
 class Network:
 
     def __init__(self):
 
         self.D_in, self.H1, self.H2, self.D_out = 4, 100, 100, 3
         self.learning_rate = 1e-6
+
+        # Declaring weighs tensors
         self.w1 = torch.randn(self.D_in, self.H1, device=device, dtype=dtype)
         self.w2 = torch.randn(self.H1, self.H2, device=device, dtype=dtype)
         self.w3 = torch.randn(self.H2, self.D_out, device=device, dtype=dtype)
 
-
-
     def forward(self, input_arr):
+
         self.h1 = input_arr.mm(self.w1)
         self.h1_relu = self.h1.clamp(min=0)
         self.h2 = self.h1_relu.mm(self.w2)
         self.h2_relu = self.h2.clamp(min=0)
         y_pred = self.h2_relu.mm(self.w3)
         predicted_move = y_pred
-        # print('ypred', ypred)
         temp = torch.argmax(y_pred[0])
         if temp == 0:
             predicted_move[0][0], predicted_move[0][1], predicted_move[0][2] = 1, 0, 0
@@ -201,7 +217,6 @@ class Network:
     def train(self, err, input_arr):
 
         grad_y_pred = -err
-        # print('diff', grad_y_pred, 'forward', self.forward(input_array), 'err',err)
         grad_w3 = self.h2_relu.t().mm(grad_y_pred)
         grad_h2_relu = grad_y_pred.mm(self.w3.t())
         grad_h2 = grad_h2_relu.clone()
@@ -297,8 +312,8 @@ while not exit_program:
         input_array[0][1] = ball.y
         input_array[0][2] = ball.direction
         input_array[0][3] = player.read_pos()
-        # print(network.forward(input_array))
-        # Limit to 30 fps
+
+        # On regular computer game will be slower anyway
         clock.tick(1000)
 
         # Clear the screen
@@ -310,7 +325,8 @@ while not exit_program:
                 exit_program = True
 
         # Update the ball and player position as long
-        # as the game is not over.
+        # as the game is not over. In case game is over, check on which side of the player
+        # has the ball touched the ground.
         if ball.update():
             if ball.read_pos() > player.read_pos():
                 err_log[0][0], err_log[0][1], err_log[0][2] = 0, 0, 1
@@ -351,11 +367,8 @@ while not exit_program:
 
         # Flip the screen and show what we've drawn
         pygame.display.flip()
-    effectiveness = torch.randn(1, 1, device=device, dtype=dtype)
-    effectiveness[0][0] = len(blocks)
-    # print(effectiveness)
-    # print(network.w1, network.w2, network.forward(input_array))
-    # eff_list.append(effectiveness)
+
+
     network.train(err_log, input_array)
 
 
